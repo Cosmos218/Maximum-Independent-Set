@@ -16,20 +16,17 @@ def isValid(mis,graph):
     for node in mis:
         for neighbor in graph.neighbors(node):
             if neighbor in mis_set:
-                print("This set is not valid because the following nodes are neighbors: ("+ node+","+neighbor+")")
-                # print(node)
-                # print(neighbor)
+                print("This set is not valid because the following nodes are neighbors: ("+ node+","+neighbor+")")                
                 return False
     return True
 
-def calculate_nodes_support(graph):
+def calculate_nodes_support(graph,graph_centrality_measure):
     support = {}
     for node in graph.nodes():
         support[node] = 0
-        for neighbor in graph.neighbors(node):
-            support[node]+= graph.degree(neighbor)
+        for neighbor in graph.neighbors(node):        
+            support[node]+= graph_centrality_measure[neighbor]
     return support
-
 
 # VSA
 def choose_next_node(graph,nodes_support):
@@ -67,7 +64,8 @@ def choose_next_node_2(graph,nodes_support):
 
     return vertex_chosen
 
-def VSA(graph, choose_type = "default"):    
+
+def greedy_heuristic(graph, choose_type = "VCA"):    
     graph_nodes_original = set(graph.nodes())    
     vertex_cover = set()    
 
@@ -75,29 +73,42 @@ def VSA(graph, choose_type = "default"):
     with tqdm(total=edges_total) as pbar:
         last = edges_total
         while len(graph.edges())>0:
-            nodes_support = calculate_nodes_support(graph)
 
             # chose node by max support, in case of tie chose max degree        
-            if(choose_type == "default"):
+            if(choose_type == "VSA"):
+                nodes_support = calculate_nodes_support(graph)
                 vertex_chosen = choose_next_node(graph,nodes_support)
             elif (choose_type == "AVSA"):
-                vertex_chosen = choose_next_node_2(graph,nodes_support)
+                nodes_support = calculate_nodes_support(graph)
+                vertex_chosen = choose_next_node_2(graph,nodes_support)            
+            elif(choose_type == "VCA"):
+                try:            
+                    # centrality_measure = nx.algorithms.centrality.closeness_centrality(graph)    
+                    # centrality_measure = nx.algorithms.centrality.betweenness_centrality(graph,k=len(graph.nodes())/2)
+                    centrality_measure = nx.algorithms.centrality.eigenvector_centrality_numpy(graph)                                    
+                    nodes_support = calculate_nodes_support(graph,centrality_measure)
+                except:
+                    centrality_measure = nx.algorithms.centrality.degree_centrality(graph)
+                    print("exception :p")
+                    nodes_support = calculate_nodes_support(graph,centrality_measure)
+
+                # embed()
+                vertex_chosen = choose_next_node(graph,nodes_support)
 
             # removing him from the graph
             graph.remove_node(vertex_chosen)
 
             # this vertex is now included in the solution
-            vertex_cover.add(vertex_chosen)        
-            # print(len(graph.edges()))
-            # print("Size of vertex cover set: " + str(len(vertex_cover)))
-            # print("Size of original vertex set: " + str(len(graph_nodes_original)))                     
+            vertex_cover.add(vertex_chosen)                    
+            
+            # updating bar
             pbar.update(last - len(graph.edges()))           
             last = len(graph.edges())
     return graph_nodes_original - (vertex_cover)    
 
 if __name__ == "__main__":
     f_results = open('results_VSA.csv', 'w')
-    mypath = "./data/DIMACS_all_ascii/"
+    mypath = "../data/DIMACS_all_ascii/"
     onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
     for file_name in onlyfiles:
         # print(file_name)    
@@ -109,10 +120,8 @@ if __name__ == "__main__":
                     v = line.split(" ")[2].strip()
                     graph.add_edge(u,v)
         
-        # mis = VSA(nx.complement(graph))
-        mis = nx.algorithms.approximation.max_clique(graph)
+        mis = greedy_heuristic(nx.complement(graph))        
         print(file_name.split("/")[-1] + " : "+ str(len(mis))) 
         f_results.write(file_name.split("/")[-1] + ","+ str(len(mis))+"\n")
+        # break
     f_results.close()
-    # print(isValid(mis,nx.complement(graph)))
-    # print(mis)    

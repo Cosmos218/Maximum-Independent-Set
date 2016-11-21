@@ -27,9 +27,12 @@ class SequentialGreedyHeuristic {
         bool isValidSolution(set<int> S);
         int choseNextNode();
         int sequentialHeuristic();
+        int updateGraph(int node);
 
     private:
         ListGraph g;
         Edge e ;
         vector<Node> nodes;
+        int edgesSize;
+        int nodesSize;
 };

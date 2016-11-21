@@ -45,10 +45,10 @@ vector<string> split(string str, char delimiter) {
   return internal;
 }
 
-void SequentialGreedyHeuristic::readGraph(string filename){     
-  int nodesSize,edgesSize;
+void SequentialGreedyHeuristic::readGraph(string filename){       
   int u,v;
-  
+  edgesSize =0;
+
   string line;
   ifstream f(filename);
 
@@ -65,13 +65,13 @@ void SequentialGreedyHeuristic::readGraph(string filename){
        }else if(line[0]=='e'){         
          vector<string> splitted = split(line,' ');
          u = stoi(splitted[1]);
-         v = stoi(splitted[2]);
+         v = stoi(splitted[2]);         
          e = g.addEdge(nodes[u],nodes[v]);
         }
     }  
   }
 
- //  Prints nodes and edges:
+  // Prints nodes and edges:
  //  cout<<"nodes"<<endl;
  //  for (ListGraph::NodeIt n(g); n != INVALID; ++n)
  //  	cout << g.id(n) << ";";
@@ -93,16 +93,68 @@ bool SequentialGreedyHeuristic::isValidSolution(set<int> S){
 }
 
 int SequentialGreedyHeuristic::choseNextNode(){
-	return 0;
+	int min_degree = 100000000;
+	int min_index = 0;
+
+	unordered_map<int,int> degrees;
+	// Choosing by degree
+	for (ListGraph::NodeIt n(g); n != INVALID; ++n){
+		int degree=0;
+		for(Graph::IncEdgeIt e(g, n); e!=INVALID; ++e) {			
+			degree++;
+		}
+		if(degree<min_degree){
+			min_degree = degree;
+			min_index = g.id(n);
+		}
+		degrees[g.id(n)] = degree;
+	}
+
+	REPM(it,degrees){
+		cout<<(*it).F<<"->"<<(*it).S<<endl;
+	}
+
+	cout<<"min:"<<min_degree<<endl;
+	cout<<"index:"<<min_index<<endl<<endl;
+
+	return min_index;
+}
+
+int SequentialGreedyHeuristic::updateGraph(int nodeIndex){
+	int removed = 0;
+	Node node = nodes[nodeIndex];	
+		
+	cout<<"removing "<<g.id(node)<<endl;
+
+	vector<Node> nodesToRemove;
+	nodesToRemove.PB(node);
+
+ 	for(Graph::IncEdgeIt e(g, node); e!=INVALID; ++e) {
+		Node oppositeNode(g.oppositeNode(node, e) );		
+		nodesToRemove.PB(oppositeNode);
+	}	
+	REP(i,nodesToRemove.size()){
+ 		g.erase(nodesToRemove[i]);
+ 	}	
+ 	nodes = vector<Node>(0);
+ 	for (ListGraph::NodeIt n(g); n != INVALID; ++n){
+ 		nodes.PB(n);
+ 	}
+
+ 	cout<<"removed "<<nodesToRemove.size()<<" nodes"<<endl;
+	return nodesToRemove.size();
 }
 
 int SequentialGreedyHeuristic::sequentialHeuristic(){
 	set<int> S;	
-
-	do{
+	int countRemoved = nodesSize;
+	cout<<nodesSize<<" nodes graph."<<endl;
+	while(countRemoved>0){
 		int nextNode = choseNextNode();
 		S.insert(nextNode);
-	} while(isValidSolution(S));
+		countRemoved -=updateGraph(nextNode);
+		// break;
+	}
 
 	return S.size();
 }

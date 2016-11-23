@@ -107,21 +107,27 @@ def greedy_heuristic(graph, choose_type = "VCA"):
     return graph_nodes_original - (vertex_cover)    
 
 if __name__ == "__main__":
-    f_results = open('results_VSA.csv', 'w')
+    f_results_already_done = open("results_VSA.csv","r")
+    graphs_done = set()
+    for line in f_results_already_done:
+        graphs_done.add(line.split(",")[0])
+
+
+    f_results = open('results_VSA_remaining.csv', 'w')
     mypath = "../data/DIMACS_all_ascii/"
     onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
-    for file_name in onlyfiles:
-        # print(file_name)    
-        graph = nx.Graph()
-        with open(mypath+file_name) as f:
-            for line in f.readlines():
-                if line[0] == 'e':
-                    u = line.split(" ")[1].strip()
-                    v = line.split(" ")[2].strip()
-                    graph.add_edge(u,v)
-        
-        mis = greedy_heuristic(nx.complement(graph))        
-        print(file_name.split("/")[-1] + " : "+ str(len(mis))) 
-        f_results.write(file_name.split("/")[-1] + ","+ str(len(mis))+"\n")
+    for file_name in onlyfiles:        
+        if(file_name not in graphs_done):
+            graph = nx.Graph()
+            with open(mypath+file_name) as f:
+                for line in f.readlines():
+                    if line[0] == 'e':
+                        u = line.split(" ")[1].strip()
+                        v = line.split(" ")[2].strip()
+                        graph.add_edge(u,v)
+            
+            mis = greedy_heuristic(nx.complement(graph))        
+            print(file_name.split("/")[-1] + " : "+ str(len(mis))) 
+            f_results.write(file_name.split("/")[-1] + ","+ str(len(mis))+"\n")
         # break
     f_results.close()

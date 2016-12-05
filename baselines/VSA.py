@@ -10,6 +10,7 @@ from os import listdir
 from os.path import isfile, join
 import progressbar
 from tqdm import tqdm
+import sys
 
 def isValid(mis,graph):
     mis_set = set(mis)
@@ -76,16 +77,19 @@ def greedy_heuristic(graph, choose_type = "VCA"):
 
             # chose node by max support, in case of tie chose max degree        
             if(choose_type == "VSA"):
-                nodes_support = calculate_nodes_support(graph)
+		centrality_measure = nx.algorithms.centrality.degree_centrality(graph)
+                nodes_support = calculate_nodes_support(graph,centrality_measure)
                 vertex_chosen = choose_next_node(graph,nodes_support)
             elif (choose_type == "AVSA"):
                 nodes_support = calculate_nodes_support(graph)
                 vertex_chosen = choose_next_node_2(graph,nodes_support)            
             elif(choose_type == "VCA"):
                 try:            
-                    # centrality_measure = nx.algorithms.centrality.closeness_centrality(graph)    
-                    # centrality_measure = nx.algorithms.centrality.betweenness_centrality(graph,k=len(graph.nodes())/2)
-                    centrality_measure = nx.algorithms.centrality.eigenvector_centrality_numpy(graph)                                    
+                    #centrality_measure = nx.algorithms.centrality.closeness_centrality(graph)    
+	            #centrality_measure = nx.algorithms.current_flow_closeness_centrality(graph)	
+		    centrality_measure = nx.algorithms.approximate_current_flow_betweenness_centrality(graph, kmax=len(graph.nodes())/3)
+                    #centrality_measure = nx.algorithms.centrality.betweenness_centrality(graph,k=len(graph.nodes())/3)
+                    #centrality_measure = nx.algorithms.centrality.eigenvector_centrality_numpy(graph)                                    
                     nodes_support = calculate_nodes_support(graph,centrality_measure)
                 except:
                     centrality_measure = nx.algorithms.centrality.degree_centrality(graph)
@@ -107,17 +111,19 @@ def greedy_heuristic(graph, choose_type = "VCA"):
     return graph_nodes_original - (vertex_cover)    
 
 if __name__ == "__main__":
-    f_results_already_done = open("results_VSA.csv","r")
+    f_results_already_done = open("results_cflowb_done.csv","r")
     graphs_done = set()
     for line in f_results_already_done:
         graphs_done.add(line.split(",")[0])
 
 
-    f_results = open('results_VSA_remaining.csv', 'w')
+    f_results = open('results_cflowb.csv', 'w')
     mypath = "../data/DIMACS_all_ascii/"
     onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
     for file_name in onlyfiles:        
         if(file_name not in graphs_done):
+	#if(True):
+	    print(file_name)
             graph = nx.Graph()
             with open(mypath+file_name) as f:
                 for line in f.readlines():
@@ -126,7 +132,7 @@ if __name__ == "__main__":
                         v = line.split(" ")[2].strip()
                         graph.add_edge(u,v)
             
-            mis = greedy_heuristic(nx.complement(graph))        
+            mis = greedy_heuristic(nx.complement(graph),sys.argv[1])        
             print(file_name.split("/")[-1] + " : "+ str(len(mis))) 
             f_results.write(file_name.split("/")[-1] + ","+ str(len(mis))+"\n")
         # break
